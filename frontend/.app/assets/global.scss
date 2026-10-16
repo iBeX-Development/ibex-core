@@ -1,0 +1,36 @@
+.v-select__selection,
+.v-select__selections {
+  font-size: 12px !important;
+}
+.dark .v-table {
+  font-size: 12px !important;
+  background-color: #1e293b !important;
+  color: #f1f5f9 !important;
+  border-color: #e5e7eb !important;
+}
+.v-table {
+  font-size: 12px !important;
+}
+.v-field {
+  font-size: 12px !important;
+}
+.v-field-label {
+  font-size: 12px !important;
+}
+
+.v-list-item-title {
+  font-size: 12px !important;
+}
+
+.v-theme--light {
+  --v-hover-opacity: 0.04;
+  --v-theme-overlay-multiplier: 1;
+}
+
+.v-theme--dark {
+  --v-hover-opacity: 0.04;
+  --v-theme-overlay-multiplier: 1;
+}
+.dragArea {
+  min-height: 1px;
+}

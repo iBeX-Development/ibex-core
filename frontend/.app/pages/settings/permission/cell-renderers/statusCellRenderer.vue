@@ -1,0 +1,59 @@
+<script setup>
+const { params } = defineProps(['params'])
+const { value, valueFormatted } = params
+</script>
+
+<template>
+  <div :class="`tag ${valueFormatted}Tag`">
+    <div :class="`circle ${valueFormatted}Circle`"></div>
+    <span>{{ $t(valueFormatted) }}</span>
+  </div>
+</template>
+
+<style>
+.tag {
+  border-radius: 100px;
+  padding-left: 4px;
+  padding-right: 12px;
+  line-height: 1.5;
+  font-weight: 500;
+  border: 1.5px solid rgba(91, 91, 91, 0.1);
+  display: flex;
+  justify-content: center;
+  align-items: center;
+}
+
+.activeTag {
+  background-color: #84ca8130;
+  border: 1.5px solid rgb(70, 227, 114, 0.2);
+}
+.pausedTag {
+  background-color: #caab7036;
+  border: 1.5px solid rgba(82, 83, 83, 0.2);
+}
+.outOfStockTag {
+  background-color: rgb(255, 0, 0, 0.05);
+  color: rgb(234, 83, 83);
+  border: 1.5px solid rgb(255, 0, 0, 0.3);
+}
+
+.circle {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  margin-right: 8px;
+  margin-left: 6px;
+}
+
+.activeCircle {
+  background-color: #6d9b7e;
+}
+
+.pausedCircle {
+  background-color: #7b7c7c;
+}
+
+.outOfStockCircle {
+  background-color: #ea5353;
+}
+</style>

@@ -1,0 +1,1675 @@
+import 'package:flutter/foundation.dart';
+import 'package:flutter/material.dart';
+import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:flutter_screenutil/flutter_screenutil.dart';
+import 'package:flutter_spinkit/flutter_spinkit.dart';
+import 'package:heroicons/heroicons.dart';
+import 'package:hive/hive.dart';
+import 'package:percent_indicator/linear_percent_indicator.dart';
+import '../../../bloc/Inspection/inspection_state.dart';
+import '../../../bloc/permissions/permissions_bloc.dart';
+import '../../../bloc/permissions/permissions_event.dart';
+import '../../../bloc/inspection_discussion/inspection_part/inspection_part_bloc.dart';
+import '../../../bloc/inspection_discussion/inspection_part/inspection_part_event.dart';
+import '../../../bloc/inspection_discussion/inspection_part/inspection_part_state.dart';
+// import '../../../bloc/inspection_discussion/inspection_part_filter/inspection_part_filter_bloc.dart';
+// import '../../../bloc/inspection_discussion/inspection_part_filter/inspection_part_filter_event.dart';
+// import '../../../bloc/inspection_discussion/inspection_part_filter/inspection_part_filter_state.dart';
+import '../../../bloc/theme/theme_bloc.dart';
+import '../../../bloc/theme/theme_state.dart';
+import '../../../config/colors.dart';
+import '../../../config/constants.dart';
+import '../../../config/strings.dart';
+import '../../../data/model/inspection/part.dart';
+import '../../../src/generated/i18n/app_localizations.dart';
+import '../../../routes/routes.dart';
+import '../../../utils/widgets/custom_dimissible.dart';
+import '../../../utils/widgets/custom_text.dart';
+import '../../../utils/widgets/my_theme.dart';
+import '../../../utils/widgets/search_pop_up.dart';
+import '../../notes/widgets/notes_shimmer_widget.dart';
+import '../../widgets/custom_container.dart';
+import '../../widgets/html_widget.dart';
+import '../../widgets/no_data.dart';
+import '../../widgets/no_permission_screen.dart';
+import '../../widgets/search_field.dart';
+import '../../widgets/speech_to_text.dart';
+import '../widgets/dateFilter.dart';
+import 'package:logger/logger.dart';
+
+final logger = Logger();
+
+class InspectionPartScreen extends StatefulWidget {
+  final int? id;
+  const InspectionPartScreen({super.key, this.id});
+
+  @override
+  State<InspectionPartScreen> createState() => _InspectionPartScreenState();
+}
+
+class _InspectionPartScreenState extends State<InspectionPartScreen> {
+  TextEditingController partSearchController = TextEditingController();
+  bool? isLoading = true;
+  String partSearchQuery = '';
+  bool? isFirst;
+  bool isLoadingMore = false;
+  String fromDate = "";
+  String toDate = "";
+  String fromDateBetween = "";
+  String toDateBetween = "";
+  String fromEndDateBetweenStart = "";
+  String toDateEndBetweenEnd = "";
+  String? statusname;
+  bool? isFirstTimeUSer;
+  final ValueNotifier<String> filterNameNotifier =
+      ValueNotifier<String>('Date between');
+  String filterName = 'Date between';
+  DateTime selectedDateStarts = DateTime.now();
+  DateTime? selectedDateEnds = DateTime.now();
+  DateTime selectedDateBetweenStarts = DateTime.now();
+  DateTime? selectedDateBetweenEnds = DateTime.now();
+  DateTime selectedDateEndBetweenStarts = DateTime.now();
+  DateTime? selectedDateEndBetweenEnds = DateTime.now();
+
+  TextEditingController startController = TextEditingController();
+  TextEditingController endController = TextEditingController();
+  TextEditingController startDateBetweenController = TextEditingController();
+  TextEditingController endDateBetweenController = TextEditingController();
+  TextEditingController startDateBetweenstartController =
+      TextEditingController();
+  TextEditingController endDateBetweenendController = TextEditingController();
+  late SpeechToTextHelper speechHelper;
+  @override
+  void initState() {
+    // TODO: implement initState
+    super.initState();
+    speechHelper = SpeechToTextHelper(
+      onSpeechResultCallback: (result) {
+        setState(() {
+          partSearchController.text = result;
+          context.read<InspectionPartBloc>().add(SearchInspectionPart(
+              widget.id, partSearchQuery, "", "", "", "", "", "", ""));
+        });
+        Navigator.pop(context);
+      },
+    );
+    _getFirstTimeUser();
+    speechHelper.initSpeech();
+  }
+
+  _handleStartEndDate(String from, String to) {
+    setState(() {
+      fromDate = from;
+      toDate = to;
+    });
+    if (kDebugMode) {
+      logger.d("fihdid $toDate");
+    }
+  }
+
+  _handleStartdateBetween(String from, String to) {
+    setState(() {
+      fromDateBetween = from;
+      toDateBetween = to;
+    });
+  }
+
+  __handleEnddateBetween(String from, String to) {
+    setState(() {
+      fromEndDateBetweenStart = from;
+      toDateEndBetweenEnd = to;
+    });
+  }
+
+  Future<void> _onRefresh() async {
+    setState(() {
+      isLoading = true;
+    });
+    BlocProvider.of<InspectionPartBloc>(context)
+        .add(InspectionPartList(id: widget.id));
+
+    BlocProvider.of<PermissionsBloc>(context).add(GetPermissions());
+
+    setState(() {
+      isLoading = false;
+    });
+  }
+
+  _getFirstTimeUser() async {
+    var box = await Hive.openBox(authBox);
+    isFirstTimeUSer = box.get(firstTimeUserKey) ?? true;
+  }
+
+  void onShowCaseCompleted() {
+    _setIsFirst(false);
+  }
+
+  _setIsFirst(value) async {
+    isFirst = value;
+    var box = await Hive.openBox(authBox);
+    box.put("isFirstCase", value);
+  }
+
+  final List<String> filter = [
+    'Date between',
+    'Start date between',
+    'End date between',
+    'Statuses',
+  ];
+  Widget _getFilteredWidget(filterName, isLightTheme) {
+    switch (filterName) {
+      case 'Date between':
+        return DateList(
+          onSelected: _handleStartEndDate,
+          startController: startController,
+          endController: endController,
+          fromDate: fromDate,
+          toDate: toDate,
+          selectedDateEnds: selectedDateEnds,
+          selectedDateStarts: selectedDateStarts,
+        ); // Show ClientList if filterName is "client"
+      case 'Start date between':
+        return DateList(
+          onSelected: _handleStartdateBetween,
+          startController: startDateBetweenController,
+          endController: endDateBetweenController,
+          fromDate: fromDateBetween,
+          toDate: toDateBetween,
+          selectedDateEnds: selectedDateBetweenEnds,
+          selectedDateStarts: selectedDateBetweenStarts,
+        ); // Show UserList if filterName is "user"
+      case 'End date between':
+        return DateList(
+          onSelected: __handleEnddateBetween,
+          startController: startDateBetweenstartController,
+          endController: endDateBetweenendController,
+          fromDate: fromEndDateBetweenStart,
+          toDate: toDateEndBetweenEnd,
+          selectedDateEnds: selectedDateEndBetweenStarts,
+          selectedDateStarts: selectedDateEndBetweenEnds,
+        );
+      case 'Statuses':
+        return StatusOfPartField(); // Show TagsList if filterName is "tags"
+      default:
+        return DateList(
+          startController: startController,
+          endController: endController,
+          fromDate: fromDate,
+          toDate: toDate,
+          selectedDateEnds: selectedDateEnds,
+          selectedDateStarts: selectedDateStarts,
+        ); // Default view
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final themeBloc = context.read<ThemeBloc>();
+    final currentTheme = themeBloc.currentThemeState;
+
+    bool isLightTheme = currentTheme is LightThemeState;
+
+    return RefreshIndicator(
+        color: AppColors.primary, // Spinner color
+        backgroundColor: Theme.of(context).colorScheme.backGroundColor,
+        onRefresh: _onRefresh,
+        child: context.read<PermissionsBloc>().isManagePart == true
+            ? Column(
+                children: [
+                  CustomSearchField(
+                    isLightTheme: isLightTheme,
+                    controller: partSearchController,
+                    suffixIcon: Padding(
+                      padding: EdgeInsets.symmetric(horizontal: 10.w),
+                      child: Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          if (partSearchController.text.isNotEmpty)
+                            SizedBox(
+                              width: 20.w,
+                              // color: AppColors.red,
+                              child: IconButton(
+                                highlightColor: Colors.transparent,
+                                padding: EdgeInsets.zero,
+                                icon: Icon(
+                                  Icons.clear,
+                                  size: 20.sp,
+                                  color: Theme.of(context)
+                                      .colorScheme
+                                      .textFieldColor,
+                                ),
+                                onPressed: () {
+                                  // Clear the search field
+                                  setState(() {
+                                    partSearchController.clear();
+                                  });
+                                  // Optionally trigger the search event with an empty string
+                                  context.read<InspectionPartBloc>().add(
+                                      SearchInspectionPart(
+                                          widget.id,
+                                          partSearchQuery,
+                                          "",
+                                          "",
+                                          "",
+                                          "",
+                                          "",
+                                          "",
+                                          ""));
+                                },
+                              ),
+                            ),
+                          SizedBox(
+                            width: 30.w,
+                            child: IconButton(
+                              icon: Icon(
+                                !speechHelper.isListening
+                                    ? Icons.mic_off
+                                    : Icons.mic,
+                                size: 20.sp,
+                                color: Theme.of(context)
+                                    .colorScheme
+                                    .textFieldColor,
+                              ),
+                              onPressed: () {
+                                if (speechHelper.isListening) {
+                                  speechHelper.stopListening();
+                                } else {
+                                  speechHelper.startListening(context,
+                                      partSearchController, SearchPopUp());
+                                }
+                              },
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                    onChanged: (value) {
+                      partSearchQuery = value;
+                      context.read<InspectionPartBloc>().add(
+                          SearchInspectionPart(widget.id, partSearchQuery, "",
+                              "", "", "", "", "", ""));
+                    },
+                  ),
+                  SizedBox(height: 10.h),
+                  Expanded(
+                    child:
+                        BlocConsumer<InspectionPartBloc, InspectionPartState>(
+                      listener: (context, state) {
+                        if (state is InspectionPartPaginated) {
+                          isLoadingMore = false;
+                          setState(() {});
+                        }
+                      },
+                      builder: (context, state) {
+                        if (state is InspectionPartLoading) {
+                          return const NotesShimmer();
+                        } else if (state is InspectionPartPaginated) {
+                          // Show notes list with pagination
+                          return NotificationListener<ScrollNotification>(
+                            onNotification: (scrollInfo) {
+                              if (scrollInfo is ScrollStartNotification) {
+                                FocusScope.of(context)
+                                    .unfocus(); // Dismiss keyboard
+                              }
+                              // Check if the user has scrolled to the end and load more notes if needed
+                              if (!state.hasReachedMax &&
+                                  scrollInfo.metrics.pixels ==
+                                      scrollInfo.metrics.maxScrollExtent &&
+                                  isLoadingMore == false) {
+                                isLoadingMore = true;
+                                setState(() {});
+                                context.read<InspectionPartBloc>().add(
+                                    InspectionPartLoadMore(
+                                        widget.id,
+                                        partSearchQuery,
+                                        "",
+                                        "",
+                                        "",
+                                        "",
+                                        "",
+                                        "",
+                                        ""));
+                              }
+                              return false;
+                            },
+                            child: context
+                                        .read<PermissionsBloc>()
+                                        .isManageInspection ==
+                                    true
+                                ? state.InspectionPart.isNotEmpty
+                                    ? ListView.builder(
+                                        padding: EdgeInsets.only(
+                                            left: 18.w,
+                                            right: 18.w,
+                                            bottom: 70.h),
+                                        // physics: NeverScrollableScrollPhysics(),
+                                        shrinkWrap: true,
+                                        itemCount: state.hasReachedMax
+                                            ? state.InspectionPart.length
+                                            : state.InspectionPart.length + 1,
+                                        itemBuilder: (context, index) {
+                                          if (index <
+                                              state.InspectionPart.length) {
+                                            InspectionsPart part =
+                                                state.InspectionPart[index];
+                                            String? startDate;
+                                            String? endDate;
+
+                                            if (part.startDate != null &&
+                                                part.startDate!.isNotEmpty) {
+                                              startDate = parseDateTimeFormat(
+                                                  part.startDate!);
+                                            }
+                                            if (part.endDate != null &&
+                                                part.endDate!.isNotEmpty) {
+                                              endDate = parseDateTimeFormat(
+                                                  part.endDate!);
+                                            }
+
+                                            return Padding(
+                                              padding: EdgeInsets.only(
+                                                  bottom: 10
+                                                      .h), // ✅ Add spacing between items
+                                              child: DismissibleCard(
+                                                direction: context
+                                                                .read<
+                                                                    PermissionsBloc>()
+                                                                .isdeletePart ==
+                                                            true &&
+                                                        context
+                                                                .read<
+                                                                    PermissionsBloc>()
+                                                                .iseditPart ==
+                                                            true
+                                                    ? DismissDirection
+                                                        .horizontal
+                                                    : context
+                                                                .read<
+                                                                    PermissionsBloc>()
+                                                                .isdeletePart ==
+                                                            true
+                                                        ? DismissDirection
+                                                            .endToStart
+                                                        : context
+                                                                    .read<
+                                                                        PermissionsBloc>()
+                                                                    .iseditPart ==
+                                                                true
+                                                            ? DismissDirection
+                                                                .startToEnd
+                                                            : DismissDirection
+                                                                .none,
+                                                title: part.id.toString(),
+                                                confirmDismiss:
+                                                    (DismissDirection
+                                                        direction) async {
+                                                  if (direction ==
+                                                      DismissDirection
+                                                          .startToEnd) {
+                                                    if (context
+                                                            .read<
+                                                                PermissionsBloc>()
+                                                            .iseditPart ==
+                                                        true) {
+                                                      router.push(
+                                                          '/inspectionpart',
+                                                          extra: {
+                                                            'isCreate': false,
+                                                            'part': part,
+                                                            "workId": widget.id
+                                                          });
+                                                      return false;
+                                                    } else {
+                                                      return false;
+                                                    }
+                                                  }
+
+                                                  if (direction ==
+                                                      DismissDirection
+                                                          .endToStart) {
+                                                    return await showDialog<
+                                                            bool>(
+                                                          context: context,
+                                                          builder: (context) {
+                                                            return AlertDialog(
+                                                              title: Text(
+                                                                  AppLocalizations.of(
+                                                                          context)!
+                                                                      .confirmDelete),
+                                                              content: Text(
+                                                                  AppLocalizations.of(
+                                                                          context)!
+                                                                      .areyousure),
+                                                              actions: [
+                                                                TextButton(
+                                                                  onPressed: () =>
+                                                                      Navigator.of(
+                                                                              context)
+                                                                          .pop(
+                                                                              true),
+                                                                  child: const Text(
+                                                                      'Delete'),
+                                                                ),
+                                                                TextButton(
+                                                                  onPressed: () =>
+                                                                      Navigator.of(
+                                                                              context)
+                                                                          .pop(
+                                                                              false),
+                                                                  child: const Text(
+                                                                      'Cancel'),
+                                                                ),
+                                                              ],
+                                                            );
+                                                          },
+                                                        ) ??
+                                                        false;
+                                                  }
+
+                                                  return false;
+                                                },
+                                                onDismissed: (DismissDirection
+                                                    direction) {
+                                                  if (direction ==
+                                                          DismissDirection
+                                                              .endToStart &&
+                                                      context
+                                                              .read<
+                                                                  PermissionsBloc>()
+                                                              .isdeletePart ==
+                                                          true) {
+                                                    setState(() {
+                                                      state.InspectionPart
+                                                          .removeAt(index);
+                                                      BlocProvider.of<
+                                                                  InspectionPartBloc>(
+                                                              context)
+                                                          .add(
+                                                              DeleteInspectionPart(
+                                                                  part.id!));
+                                                      BlocProvider.of<
+                                                                  InspectionPartBloc>(
+                                                              context)
+                                                          .add(
+                                                              InspectionPartList(
+                                                                  id: widget
+                                                                      .id));
+                                                    });
+                                                  }
+                                                },
+                                                dismissWidget: Padding(
+                                                  padding: EdgeInsets.symmetric(
+                                                      vertical: 0.h),
+                                                  child: customContainer(
+                                                    context: context,
+                                                    addWidget: Padding(
+                                                      padding:
+                                                          EdgeInsets.symmetric(
+                                                              horizontal: 18.w,
+                                                              vertical: 15.h),
+                                                      child: Column(
+                                                        mainAxisAlignment:
+                                                            MainAxisAlignment
+                                                                .start,
+                                                        crossAxisAlignment:
+                                                            CrossAxisAlignment
+                                                                .start,
+                                                        children: [
+                                                          // ✅ ID and Part Number
+                                                          Row(
+                                                            mainAxisAlignment:
+                                                                MainAxisAlignment
+                                                                    .spaceBetween,
+                                                            children: [
+                                                              CustomText(
+                                                                text:
+                                                                    "#${part.id}",
+                                                                size: 14.sp,
+                                                                color: Theme.of(
+                                                                        context)
+                                                                    .colorScheme
+                                                                    .textClrChange,
+                                                                fontWeight:
+                                                                    FontWeight
+                                                                        .w700,
+                                                                maxLines: 1,
+                                                                overflow:
+                                                                    TextOverflow
+                                                                        .ellipsis,
+                                                              ),
+                                                              if (part.partNumber !=
+                                                                      null &&
+                                                                  part.partNumber!
+                                                                      .isNotEmpty)
+                                                                Container(
+                                                                  padding: EdgeInsets.symmetric(
+                                                                      horizontal:
+                                                                          8.w,
+                                                                      vertical:
+                                                                          4.h),
+                                                                  decoration:
+                                                                      BoxDecoration(
+                                                                    color: AppColors
+                                                                        .primary
+                                                                        .withValues(alpha: 
+                                                                            0.1),
+                                                                    borderRadius:
+                                                                        BorderRadius
+                                                                            .circular(5),
+                                                                  ),
+                                                                  child:
+                                                                      CustomText(
+                                                                    text: part
+                                                                        .partNumber!,
+                                                                    size: 11.sp,
+                                                                    color: AppColors
+                                                                        .primary,
+                                                                    fontWeight:
+                                                                        FontWeight
+                                                                            .w600,
+                                                                  ),
+                                                                ),
+                                                            ],
+                                                          ),
+
+                                                          // ✅ Part Name and Price
+                                                          Padding(
+                                                            padding:
+                                                                EdgeInsets.only(
+                                                                    top: 5.h),
+                                                            child: Row(
+                                                              mainAxisAlignment:
+                                                                  MainAxisAlignment
+                                                                      .spaceBetween,
+                                                              crossAxisAlignment:
+                                                                  CrossAxisAlignment
+                                                                      .start,
+                                                              children: [
+                                                                Expanded(
+                                                                  child:
+                                                                      CustomText(
+                                                                    text: part
+                                                                        .displayName,
+                                                                    size: 18.sp,
+                                                                    color: Theme.of(
+                                                                            context)
+                                                                        .colorScheme
+                                                                        .textClrChange,
+                                                                    fontWeight:
+                                                                        FontWeight
+                                                                            .w700,
+                                                                    maxLines: 2,
+                                                                    overflow:
+                                                                        TextOverflow
+                                                                            .ellipsis,
+                                                                  ),
+                                                                ),
+                                                                SizedBox(
+                                                                    width:
+                                                                        10.w),
+                                                                CustomText(
+                                                                  text:
+                                                                      "${part.formattedPrice}₮",
+                                                                  size: 16.sp,
+                                                                  color: AppColors
+                                                                      .primary,
+                                                                  fontWeight:
+                                                                      FontWeight
+                                                                          .w700,
+                                                                ),
+                                                              ],
+                                                            ),
+                                                          ),
+
+                                                          // ✅ Model & Serial Number
+                                                          if ((part.partModelNo !=
+                                                                      null &&
+                                                                  part.partModelNo!
+                                                                      .isNotEmpty) ||
+                                                              (part.partSerialNo !=
+                                                                      null &&
+                                                                  part.partSerialNo!
+                                                                      .isNotEmpty))
+                                                            Padding(
+                                                              padding: EdgeInsets
+                                                                  .only(
+                                                                      top: 5.h),
+                                                              child: Row(
+                                                                children: [
+                                                                  if (part.partModelNo !=
+                                                                          null &&
+                                                                      part.partModelNo!
+                                                                          .isNotEmpty) ...[
+                                                                    Icon(
+                                                                        Icons
+                                                                            .precision_manufacturing,
+                                                                        size: 14
+                                                                            .sp,
+                                                                        color: AppColors
+                                                                            .greyColor),
+                                                                    SizedBox(
+                                                                        width: 4
+                                                                            .w),
+                                                                    CustomText(
+                                                                      text:
+                                                                          "Model: ${part.partModelNo}",
+                                                                      size:
+                                                                          11.sp,
+                                                                      color: AppColors
+                                                                          .greyColor,
+                                                                    ),
+                                                                    SizedBox(
+                                                                        width: 15
+                                                                            .w),
+                                                                  ],
+                                                                  if (part.partSerialNo !=
+                                                                          null &&
+                                                                      part.partSerialNo!
+                                                                          .isNotEmpty) ...[
+                                                                    Icon(
+                                                                        Icons
+                                                                            .confirmation_number,
+                                                                        size: 14
+                                                                            .sp,
+                                                                        color: AppColors
+                                                                            .greyColor),
+                                                                    SizedBox(
+                                                                        width: 4
+                                                                            .w),
+                                                                    CustomText(
+                                                                      text:
+                                                                          "S/N: ${part.partSerialNo}",
+                                                                      size:
+                                                                          11.sp,
+                                                                      color: AppColors
+                                                                          .greyColor,
+                                                                    ),
+                                                                  ],
+                                                                ],
+                                                              ),
+                                                            ),
+
+                                                          // ✅ Description
+                                                          if (part
+                                                              .displayDescription
+                                                              .isNotEmpty)
+                                                            Padding(
+                                                              padding: EdgeInsets
+                                                                  .only(
+                                                                      top: 8.h),
+                                                              child: htmlWidget(
+                                                                  part.displayDescription,
+                                                                  context,
+                                                                  height: 38.h),
+                                                            ),
+
+                                                          SizedBox(
+                                                              height: 10.h),
+
+                                                          // ✅ Quantity and Status
+
+                                                          Container(
+                                                            padding:
+                                                                EdgeInsets.all(
+                                                                    12.w),
+                                                            decoration:
+                                                                BoxDecoration(
+                                                              color: AppColors
+                                                                  .primary
+                                                                  .withValues(alpha: 
+                                                                      0.05),
+                                                              borderRadius:
+                                                                  BorderRadius
+                                                                      .circular(
+                                                                          10),
+                                                              border:
+                                                                  Border.all(
+                                                                color: AppColors
+                                                                    .primary
+                                                                    .withValues(alpha: 
+                                                                        0.2),
+                                                                width: 1,
+                                                              ),
+                                                            ),
+                                                            child: Column(
+                                                              children: [
+                                                                // ✅ Planned Values (Quantity, Price, Amount)
+                                                                Row(
+                                                                  children: [
+                                                                    Icon(
+                                                                        Icons
+                                                                            .description_outlined,
+                                                                        size: 16
+                                                                            .sp,
+                                                                        color: AppColors
+                                                                            .primary),
+                                                                    SizedBox(
+                                                                        width: 5
+                                                                            .w),
+                                                                    CustomText(
+                                                                      text:
+                                                                          "Planned",
+                                                                      size:
+                                                                          13.sp,
+                                                                      color: AppColors
+                                                                          .primary,
+                                                                      fontWeight:
+                                                                          FontWeight
+                                                                              .w700,
+                                                                    ),
+                                                                  ],
+                                                                ),
+                                                                SizedBox(
+                                                                    height:
+                                                                        8.h),
+                                                                Row(
+                                                                  mainAxisAlignment:
+                                                                      MainAxisAlignment
+                                                                          .spaceBetween,
+                                                                  children: [
+                                                                    // Quantity
+                                                                    Expanded(
+                                                                      child:
+                                                                          Column(
+                                                                        crossAxisAlignment:
+                                                                            CrossAxisAlignment.start,
+                                                                        children: [
+                                                                          CustomText(
+                                                                            text:
+                                                                                "Qty",
+                                                                            size:
+                                                                                11.sp,
+                                                                            color:
+                                                                                AppColors.greyColor,
+                                                                            fontWeight:
+                                                                                FontWeight.w500,
+                                                                          ),
+                                                                          SizedBox(
+                                                                              height: 2.h),
+                                                                          CustomText(
+                                                                            text:
+                                                                                "${part.quantity ?? 0}",
+                                                                            size:
+                                                                                11.sp,
+                                                                            color:
+                                                                                Theme.of(context).colorScheme.textClrChange,
+                                                                            fontWeight:
+                                                                                FontWeight.w700,
+                                                                          ),
+                                                                        ],
+                                                                      ),
+                                                                    ),
+                                                                    // Price
+                                                                    Expanded(
+                                                                      child:
+                                                                          Column(
+                                                                        crossAxisAlignment:
+                                                                            CrossAxisAlignment.start,
+                                                                        children: [
+                                                                          CustomText(
+                                                                            text:
+                                                                                "Price",
+                                                                            size:
+                                                                                11.sp,
+                                                                            color:
+                                                                                AppColors.greyColor,
+                                                                            fontWeight:
+                                                                                FontWeight.w500,
+                                                                          ),
+                                                                          SizedBox(
+                                                                              height: 2.h),
+                                                                          CustomText(
+                                                                            text:
+                                                                                "${part.formattedPrice}₮",
+                                                                            size:
+                                                                                11.sp,
+                                                                            color:
+                                                                                Theme.of(context).colorScheme.textClrChange,
+                                                                            fontWeight:
+                                                                                FontWeight.w700,
+                                                                          ),
+                                                                        ],
+                                                                      ),
+                                                                    ),
+                                                                    // Amount
+                                                                    Expanded(
+                                                                      child:
+                                                                          Column(
+                                                                        crossAxisAlignment:
+                                                                            CrossAxisAlignment.start,
+                                                                        children: [
+                                                                          CustomText(
+                                                                            text:
+                                                                                "Amount",
+                                                                            size:
+                                                                                11.sp,
+                                                                            color:
+                                                                                AppColors.greyColor,
+                                                                            fontWeight:
+                                                                                FontWeight.w500,
+                                                                          ),
+                                                                          SizedBox(
+                                                                              height: 2.h),
+                                                                          CustomText(
+                                                                            text:
+                                                                                "${part.formattedAmount} ₮",
+                                                                            size:
+                                                                                11.sp,
+                                                                            color:
+                                                                                Theme.of(context).colorScheme.textClrChange,
+                                                                            fontWeight:
+                                                                                FontWeight.w700,
+                                                                          ),
+                                                                        ],
+                                                                      ),
+                                                                    ),
+                                                                  ],
+                                                                ),
+
+                                                                // ✅ Divider
+                                                                if (part.actualQuantity !=
+                                                                        null ||
+                                                                    part.formattedActualPrice !=
+                                                                        0 ||
+                                                                    part.formattedActualAmount !=
+                                                                        0)
+                                                                  Padding(
+                                                                    padding: EdgeInsets.symmetric(
+                                                                        vertical:
+                                                                            10.h),
+                                                                    child:
+                                                                        Divider(
+                                                                      color: AppColors
+                                                                          .primary
+                                                                          .withValues(alpha: 
+                                                                              0.2),
+                                                                      thickness:
+                                                                          1,
+                                                                      height: 1,
+                                                                    ),
+                                                                  ),
+
+                                                                // ✅ Actual Values (if exists)
+                                                                if (part.actualQuantity !=
+                                                                        null ||
+                                                                    part.formattedActualPrice !=
+                                                                        0 ||
+                                                                    part.formattedActualAmount !=
+                                                                        0) ...[
+                                                                  Row(
+                                                                    children: [
+                                                                      Icon(
+                                                                          Icons
+                                                                              .check_circle_outline,
+                                                                          size: 16
+                                                                              .sp,
+                                                                          color:
+                                                                              Colors.green),
+                                                                      SizedBox(
+                                                                          width:
+                                                                              5.w),
+                                                                      CustomText(
+                                                                        text:
+                                                                            "Actual",
+                                                                        size: 13
+                                                                            .sp,
+                                                                        color: Colors
+                                                                            .green,
+                                                                        fontWeight:
+                                                                            FontWeight.w700,
+                                                                      ),
+                                                                    ],
+                                                                  ),
+                                                                  SizedBox(
+                                                                      height:
+                                                                          8.h),
+                                                                  Row(
+                                                                    mainAxisAlignment:
+                                                                        MainAxisAlignment
+                                                                            .spaceBetween,
+                                                                    children: [
+                                                                      // Actual Quantity
+                                                                      Expanded(
+                                                                        child:
+                                                                            Column(
+                                                                          crossAxisAlignment:
+                                                                              CrossAxisAlignment.start,
+                                                                          children: [
+                                                                            CustomText(
+                                                                              text: "Qty",
+                                                                              size: 11.sp,
+                                                                              color: AppColors.greyColor,
+                                                                              fontWeight: FontWeight.w500,
+                                                                            ),
+                                                                            SizedBox(height: 2.h),
+                                                                            CustomText(
+                                                                              text: "${part.actualQuantity ?? 0}",
+                                                                              size: 11.sp,
+                                                                              color: Colors.green.shade700,
+                                                                              fontWeight: FontWeight.w700,
+                                                                            ),
+                                                                          ],
+                                                                        ),
+                                                                      ),
+                                                                      // Actual Price
+                                                                      Expanded(
+                                                                        child:
+                                                                            Column(
+                                                                          crossAxisAlignment:
+                                                                              CrossAxisAlignment.start,
+                                                                          children: [
+                                                                            CustomText(
+                                                                              text: "Price",
+                                                                              size: 11.sp,
+                                                                              color: AppColors.greyColor,
+                                                                              fontWeight: FontWeight.w500,
+                                                                            ),
+                                                                            SizedBox(height: 2.h),
+                                                                            CustomText(
+                                                                              text: "${part.formattedActualPrice ?? '0'} ₮",
+                                                                              size: 11.sp,
+                                                                              color: Colors.green.shade700,
+                                                                              fontWeight: FontWeight.w700,
+                                                                            ),
+                                                                          ],
+                                                                        ),
+                                                                      ),
+                                                                      // Actual Amount
+                                                                      Expanded(
+                                                                        child:
+                                                                            Column(
+                                                                          crossAxisAlignment:
+                                                                              CrossAxisAlignment.start,
+                                                                          children: [
+                                                                            CustomText(
+                                                                              text: "Amount",
+                                                                              size: 11.sp,
+                                                                              color: AppColors.greyColor,
+                                                                              fontWeight: FontWeight.w500,
+                                                                            ),
+                                                                            SizedBox(height: 2.h),
+                                                                            CustomText(
+                                                                              text: "${part.formattedActualAmount ?? '0'} ₮",
+                                                                              size: 11.sp,
+                                                                              color: Colors.green.shade700,
+                                                                              fontWeight: FontWeight.w700,
+                                                                            ),
+                                                                          ],
+                                                                        ),
+                                                                      ),
+                                                                    ],
+                                                                  ),
+                                                                ],
+                                                              ],
+                                                            ),
+                                                          ),
+
+                                                          SizedBox(
+                                                              height: 10.h),
+
+                                                          // ✅ Status (Keep this separate)
+                                                          // if (part.status !=
+                                                          //         null &&
+                                                          //     part.status!
+                                                          //         .isNotEmpty)
+                                                          //   Container(
+                                                          //     alignment:
+                                                          //         Alignment
+                                                          //             .center,
+                                                          //     padding: EdgeInsets
+                                                          //         .symmetric(
+                                                          //             horizontal:
+                                                          //                 12.w,
+                                                          //             vertical:
+                                                          //                 8.h),
+                                                          //     decoration:
+                                                          //         BoxDecoration(
+                                                          //       borderRadius:
+                                                          //           BorderRadius
+                                                          //               .circular(
+                                                          //                   8),
+                                                          //       color: Colors
+                                                          //           .red
+                                                          //           .shade800,
+                                                          //     ),
+                                                          //     child: Row(
+                                                          //       mainAxisSize:
+                                                          //           MainAxisSize
+                                                          //               .min,
+                                                          //       children: [
+                                                          //         Icon(
+                                                          //             Icons
+                                                          //                 .info_outline,
+                                                          //             size:
+                                                          //                 16.sp,
+                                                          //             color: AppColors
+                                                          //                 .whiteColor),
+                                                          //         SizedBox(
+                                                          //             width:
+                                                          //                 5.w),
+                                                          //         CustomText(
+                                                          //           text: part
+                                                          //               .status!,
+                                                          //           color: AppColors
+                                                          //               .whiteColor,
+                                                          //           size: 14.sp,
+                                                          //           fontWeight:
+                                                          //               FontWeight
+                                                          //                   .w600,
+                                                          //         ),
+                                                          //       ],
+                                                          //     ),
+                                                          //   ),
+
+                                                          // ✅ Dates
+                                                          if ((startDate !=
+                                                                      null &&
+                                                                  startDate
+                                                                      .isNotEmpty) ||
+                                                              (endDate !=
+                                                                      null &&
+                                                                  endDate
+                                                                      .isNotEmpty))
+                                                            Padding(
+                                                              padding: EdgeInsets
+                                                                  .only(
+                                                                      top:
+                                                                          10.h),
+                                                              child: Row(
+                                                                mainAxisAlignment:
+                                                                    MainAxisAlignment
+                                                                        .spaceBetween,
+                                                                children: [
+                                                                  CustomText(
+                                                                    text:
+                                                                        startDate ??
+                                                                            "",
+                                                                    size: 11.sp,
+                                                                    color: AppColors
+                                                                        .greyColor,
+                                                                    fontWeight:
+                                                                        FontWeight
+                                                                            .w600,
+                                                                  ),
+                                                                  Icon(
+                                                                    Icons
+                                                                        .compare_arrows,
+                                                                    color: AppColors
+                                                                        .greyColor,
+                                                                    size: 20,
+                                                                  ),
+                                                                  CustomText(
+                                                                    text:
+                                                                        endDate ??
+                                                                            "",
+                                                                    size: 11.sp,
+                                                                    color: AppColors
+                                                                        .greyColor,
+                                                                    fontWeight:
+                                                                        FontWeight
+                                                                            .w600,
+                                                                  ),
+                                                                ],
+                                                              ),
+                                                            ),
+
+                                                          // ✅ Progress indicator - only if progress exists
+                                                          if (part.hasProgress)
+                                                            Padding(
+                                                              padding: EdgeInsets
+                                                                  .only(
+                                                                      top:
+                                                                          10.h),
+                                                              child: Row(
+                                                                children: [
+                                                                  Expanded(
+                                                                    child:
+                                                                        LinearPercentIndicator(
+                                                                      padding:
+                                                                          EdgeInsets
+                                                                              .zero,
+                                                                      animation:
+                                                                          true,
+                                                                      lineHeight:
+                                                                          8.0,
+                                                                      barRadius:
+                                                                          Radius.circular(
+                                                                              10),
+                                                                      animationDuration:
+                                                                          2500,
+                                                                      percent: part
+                                                                          .progressPercentage,
+                                                                      progressColor:
+                                                                          AppColors
+                                                                              .primary,
+                                                                    ),
+                                                                  ),
+                                                                  SizedBox(
+                                                                      width:
+                                                                          10.w),
+                                                                  CustomText(
+                                                                    text: part
+                                                                        .progressText,
+                                                                    size: 14.sp,
+                                                                    color: Theme.of(
+                                                                            context)
+                                                                        .colorScheme
+                                                                        .textClrChange,
+                                                                    fontWeight:
+                                                                        FontWeight
+                                                                            .w600,
+                                                                  ),
+                                                                ],
+                                                              ),
+                                                            ),
+                                                        ],
+                                                      ),
+                                                    ),
+                                                  ),
+                                                ),
+                                              ),
+                                            );
+                                          } else {
+                                            return Padding(
+                                              padding:
+                                                  const EdgeInsets.symmetric(
+                                                      vertical: 0),
+                                              child: Center(
+                                                child: state.hasReachedMax
+                                                    ? const SizedBox.shrink()
+                                                    : const SpinKitFadingCircle(
+                                                        color:
+                                                            AppColors.primary,
+                                                        size: 40.0,
+                                                      ),
+                                              ),
+                                            );
+                                          }
+                                        })
+                                    : NoData(
+                                        isImage: true,
+                                      )
+                                : NoPermission(),
+                          );
+                        } else if (state is InspectionError) {
+                          // Show error message
+                          return const NotesShimmer();
+                        } else if (state is InspectionSuccess) {}
+                        // Handle other states
+                        return Container();
+                      },
+                    ),
+                  )
+                ],
+              )
+            : const NoPermission());
+  }
+
+  void showToastWithProgress(BuildContext context, double progress) {
+    OverlayState overlayState = Overlay.of(context);
+    OverlayEntry overlayEntry = OverlayEntry(
+      builder: (context) => Positioned(
+        bottom: 80.0,
+        left: 20.0,
+        right: 20.0,
+        child: Material(
+          color: Colors.transparent,
+          child: Container(
+            decoration: BoxDecoration(
+              borderRadius: BorderRadius.circular(17.4),
+              color: Theme.of(context).colorScheme.containerDark,
+            ),
+
+            // height: 50.h,
+            child: Padding(
+              padding: EdgeInsets.symmetric(horizontal: 18.w, vertical: 10.h),
+              child: Column(
+                // mainAxisSize: MainAxisSize.min,
+                children: [
+                  CustomText(
+                    text:
+                        "Downloading... ${(progress * 100).toStringAsFixed(0)} %",
+                    color: Theme.of(context).colorScheme.textClrChange,
+                    size: 11.sp,
+                  ),
+                  SizedBox(height: 15),
+                  LinearProgressIndicator(
+                    value: progress,
+                    backgroundColor:
+                        Theme.of(context).colorScheme.textClrChange,
+                    minHeight: 8.h,
+                    borderRadius: BorderRadius.circular(20),
+                  ),
+                ],
+              ),
+            ),
+          ),
+        ),
+      ),
+    );
+
+    overlayState.insert(overlayEntry);
+
+    // Remove after a few seconds or upon completion
+    Future.delayed(Duration(seconds: 5), () {
+      overlayEntry.remove();
+    });
+  }
+
+  Widget partCard(projectPart, index, part, startDate, endDate, result) {
+    return DismissibleCard(
+        key: ValueKey(part.id),
+        direction: context.read<PermissionsBloc>().isdeletePart == true &&
+                context.read<PermissionsBloc>().iseditPart == true
+            ? DismissDirection.horizontal // Allow both directions
+            : context.read<PermissionsBloc>().isdeletePart == true
+                ? DismissDirection.endToStart // Allow delete
+                : context.read<PermissionsBloc>().iseditPart == true
+                    ? DismissDirection.startToEnd // Allow edit
+                    : DismissDirection.none,
+        title: part.id.toString(),
+        confirmDismiss: (DismissDirection direction) async {
+          if (direction == DismissDirection.startToEnd) {
+            if (context.read<PermissionsBloc>().iseditPart == true) {
+              router.push('/inspectionpart', extra: {
+                'isCreate': false,
+                'part': part,
+                "workId": widget.id
+              });
+              return false;
+            } else {
+              // No edit permission, prevent swipe
+              return false;
+            }
+          }
+
+          // Handle deletion confirmation
+          if (direction == DismissDirection.endToStart) {
+            return await showDialog<bool>(
+                  context: context,
+                  builder: (context) {
+                    return AlertDialog(
+                      title: Text(AppLocalizations.of(context)!.confirmDelete),
+                      content: Text(AppLocalizations.of(context)!.areyousure),
+                      actions: [
+                        TextButton(
+                          onPressed: () =>
+                              Navigator.of(context).pop(true), // Confirm
+                          child: const Text('Delete'),
+                        ),
+                        TextButton(
+                          onPressed: () =>
+                              Navigator.of(context).pop(false), // Cancel
+                          child: const Text('Cancel'),
+                        ),
+                      ],
+                    );
+                  },
+                ) ??
+                false; // Default to false if dialog is dismissed without action
+          }
+
+          return false; // Default case for other directions
+        },
+        onDismissed: (DismissDirection direction) {
+          if (direction == DismissDirection.endToStart &&
+              context.read<PermissionsBloc>().isdeletePart == true) {
+            setState(() {
+              projectPart.removeAt(index);
+              BlocProvider.of<InspectionPartBloc>(context)
+                  .add(DeleteInspectionPart(part.id));
+              BlocProvider.of<InspectionPartBloc>(context)
+                  .add(InspectionPartList(id: widget.id));
+            });
+          } else if (direction == DismissDirection.startToEnd &&
+              context.read<PermissionsBloc>().iseditPart == true) {}
+        },
+        dismissWidget: Padding(
+          padding: EdgeInsets.symmetric(vertical: 0.h),
+          child: customContainer(
+            context: context,
+            addWidget: Padding(
+              padding: EdgeInsets.symmetric(horizontal: 18.w, vertical: 15.h),
+              child: Column(
+                mainAxisAlignment: MainAxisAlignment.start,
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      CustomText(
+                        text: "#${part.id.toString()}",
+                        size: 14.sp,
+                        color: Theme.of(context).colorScheme.textClrChange,
+                        fontWeight: FontWeight.w700,
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                    ],
+                  ),
+                  Padding(
+                    padding: EdgeInsets.only(top: 0.h),
+                    child: SizedBox(
+                      width: 300.w,
+                      child: Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                        children: [
+                          Container(
+                            alignment: Alignment.centerLeft,
+                            height: 40.h,
+                            child: CustomText(
+                              text: part.title!,
+                              size: 24,
+                              color:
+                                  Theme.of(context).colorScheme.textClrChange,
+                              fontWeight: FontWeight.w700,
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                            ),
+                          ),
+                          Container(
+                            alignment: Alignment.centerRight,
+                            width: 100.w,
+                            height: 40.h,
+                            child: CustomText(
+                              text: part.cost.toString(),
+                              size: 14,
+                              color:
+                                  Theme.of(context).colorScheme.textClrChange,
+                              fontWeight: FontWeight.w700,
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                            ),
+                          )
+                        ],
+                      ),
+                    ),
+                  ),
+                  part.description == null || part.description == ""
+                      ? SizedBox()
+                      : htmlWidget(part.description!, context, height: 38.h),
+                  SizedBox(
+                    height: 10.h,
+                  ),
+                  Container(
+                    alignment: Alignment.center,
+                    height: 25.h,
+                    width: 110.w, //
+                    decoration: BoxDecoration(
+                        borderRadius: BorderRadius.circular(10),
+                        color: Colors
+                            .red.shade800), // Set the height of the dropdown
+                    child: Center(
+                      child: Padding(
+                          padding: EdgeInsets.symmetric(horizontal: 10.w),
+                          child: CustomText(
+                            text: part.status!,
+                            color: AppColors.whiteColor,
+                            size: 11.sp,
+                            fontWeight: FontWeight.w600,
+                          )),
+                    ),
+                  ),
+                  Padding(
+                    padding: EdgeInsets.only(top: 10.h),
+                    child: Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: [
+                        CustomText(
+                          text: startDate ?? "",
+                          size: 11.sp,
+                          color: AppColors.greyColor,
+                          fontWeight: FontWeight.w600,
+                        ),
+                        Icon(
+                          Icons.compare_arrows,
+                          color: AppColors.greyColor,
+                          size: 20,
+                        ),
+                        CustomText(
+                          text: endDate ?? "",
+                          size: 11.sp,
+                          color: AppColors.greyColor,
+                          fontWeight: FontWeight.w600,
+                        ),
+                      ],
+                    ),
+                  ),
+                  Padding(
+                    padding: EdgeInsets.only(top: 10.h),
+                    child: Row(
+                      children: [
+                        Container(
+                          child: LinearPercentIndicator(
+                            padding: EdgeInsets.zero,
+                            width: 200.w,
+                            animation: true,
+                            lineHeight: 8.0,
+                            barRadius: Radius.circular(10),
+                            animationDuration: 2500,
+                            percent: result,
+                            progressColor: AppColors.primary,
+                          ),
+                        ),
+                        Padding(
+                          padding: EdgeInsets.symmetric(horizontal: 18.w),
+                          child: CustomText(
+                            text: "${part.progress.toString()} %",
+                            size: 15,
+                            color: Theme.of(context).colorScheme.textClrChange,
+                          ),
+                        )
+                      ],
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ),
+        ));
+  }
+
+  void _filterDialog(BuildContext context, isLightTheme) {
+    showModalBottomSheet(
+      backgroundColor: Theme.of(context).colorScheme.containerDark,
+      context: context,
+      isScrollControlled:
+          true, // Allows the bottom sheet to take the full height
+      builder: (BuildContext context) {
+        return FractionallySizedBox(
+            heightFactor: 0.5, // 80% of the screen height
+            child: Container(
+              padding: EdgeInsets.all(16.w),
+              child: Column(
+                mainAxisSize:
+                    MainAxisSize.min, // Minimize the size of the bottom sheet
+                children: <Widget>[
+                  SizedBox(height: 10),
+                  // Title
+                  CustomText(
+                    text: AppLocalizations.of(context)!.selectfilter,
+                    color: AppColors.primary,
+                    size: 30.sp,
+                    fontWeight: FontWeight.bold,
+                  ),
+                  SizedBox(height: 20), // Spacing
+
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.start,
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: <Widget>[
+                      Expanded(
+                        flex: 2,
+                        child: SizedBox(
+                          height: 230.h, // Set a specific height if needed
+                          child: ListView.builder(
+                            physics: NeverScrollableScrollPhysics(),
+                            itemCount: filter.length,
+                            itemBuilder: (BuildContext context, int index) {
+                              return InkWell(
+                                onTap: () {
+                                  setState(() {
+                                    filterNameNotifier.value = filter[index];
+                                    filterName = filter[index];
+                                  });
+                                },
+                                child: Padding(
+                                  padding: EdgeInsets.symmetric(vertical: 2.h),
+                                  child: Container(
+                                    height: 50.h,
+                                    decoration: BoxDecoration(
+                                      boxShadow: [
+                                        isLightTheme
+                                            ? MyThemesFilter.lightThemeShadow
+                                            : MyThemesFilter.darkThemeShadow,
+                                      ],
+                                      color: Theme.of(context)
+                                          .colorScheme
+                                          .containerDark,
+                                    ),
+                                    child: Row(
+                                      children: [
+                                        ValueListenableBuilder<String>(
+                                          valueListenable: filterNameNotifier,
+                                          builder:
+                                              (context, filterName, child) {
+                                            return filterName == filter[index]
+                                                ? Expanded(
+                                                    flex: 1,
+                                                    child: Container(
+                                                      width: 2,
+                                                      color: AppColors.primary,
+                                                    ),
+                                                  )
+                                                : Expanded(
+                                                    flex: 1, child: SizedBox());
+                                          },
+                                        ),
+                                        Expanded(
+                                          flex: 35,
+                                          child: Padding(
+                                            padding: EdgeInsets.only(left: 5.w),
+                                            child: Text(
+                                              filter[index],
+                                              style: TextStyle(
+                                                color: Theme.of(context)
+                                                    .colorScheme
+                                                    .textClrChange,
+                                                fontSize: 15,
+                                              ),
+                                            ),
+                                          ),
+                                        ),
+                                      ],
+                                    ),
+                                  ),
+                                ),
+                              );
+                            },
+                          ),
+                        ),
+                      ),
+
+                      // Vertical Divider
+
+                      // Second Column (Placeholder for future content)
+                      Expanded(
+                        flex: 4,
+                        child: ValueListenableBuilder<String>(
+                          valueListenable: filterNameNotifier,
+                          builder: (context, filterName, child) {
+                            return _getFilteredWidget(filterName, isLightTheme);
+                          },
+                        ),
+                      ),
+                    ],
+                  ),
+                  SizedBox(height: 5.h), // Spacing between content and buttons
+
+                  // Actions (Buttons)
+                ],
+              ),
+            ));
+      },
+    );
+  }
+
+  Widget StatusOfPartField() {
+    return StatefulBuilder(builder:
+        (BuildContext context, void Function(void Function()) setState) {
+      return Container(
+        constraints: BoxConstraints(maxHeight: 900.h),
+        width: MediaQuery.of(context).size.width,
+        child: ListView.builder(
+          shrinkWrap: true,
+          itemCount: status.length,
+          itemBuilder: (BuildContext context, int index) {
+            final isSelected = statusname == status[index];
+
+            return Padding(
+              padding: EdgeInsets.symmetric(vertical: 2.h),
+              child: InkWell(
+                highlightColor: Colors.transparent, // No highlight on tap
+                splashColor: Colors.transparent,
+                onTap: () {
+                  setState(() {
+                    statusname = status[index];
+                  });
+                },
+                child: Padding(
+                  padding: EdgeInsets.symmetric(
+                    horizontal: 20.w,
+                  ),
+                  child: Container(
+                    width: double.infinity,
+                    height: 35.h,
+                    decoration: BoxDecoration(
+                        color: isSelected
+                            ? AppColors.purpleShade
+                            : Colors.transparent,
+                        borderRadius: BorderRadius.circular(10),
+                        border: Border.all(
+                            color: isSelected
+                                ? AppColors.purple
+                                : Colors.transparent)),
+                    child: Center(
+                      child: Padding(
+                        padding: EdgeInsets.symmetric(horizontal: 18.w),
+                        child: Row(
+                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                          children: [
+                            SizedBox(
+                              width: 120.w,
+                              // color: Colors.red,
+                              child: CustomText(
+                                text: status[index],
+                                fontWeight: FontWeight.w500,
+                                size: 18.sp,
+                                maxLines: 1,
+                                overflow: TextOverflow.ellipsis,
+                                color: isSelected
+                                    ? AppColors.purple
+                                    : Theme.of(context)
+                                        .colorScheme
+                                        .textClrChange,
+                              ),
+                            ),
+                            isSelected
+                                ? const HeroIcon(HeroIcons.checkCircle,
+                                    style: HeroIconStyle.solid,
+                                    color: AppColors.purple)
+                                : const SizedBox.shrink(),
+                          ],
+                        ),
+                      ),
+                    ),
+                  ),
+                ),
+              ),
+            );
+          },
+        ),
+      );
+    });
+  }
+}

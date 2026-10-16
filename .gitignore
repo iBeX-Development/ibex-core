@@ -1,0 +1,97 @@
+# Defense in depth only. Import exactly the reviewed manifest from this source root.
+# Never import the parent workspace or sibling review/scanner/withheld directories.
+
+# Environment files; reviewed example templates remain visible.
+.env
+.env.*
+!.env.example
+!.env.sample
+!.env.template
+
+# Credentials and private signing material.
+.npmrc
+deploy_key
+id_rsa
+id_ed25519
+service_account*.json
+service-account*.json
+credentials.json
+credentials.*.json
+*.pem
+*.key
+*.p12
+*.pfx
+*.jks
+*.keystore
+*.mobileprovision
+key.properties
+local.properties
+google-services.json
+GoogleService-Info.plist
+ExportOptions.plist
+/mobile/ios/Runner.xcodeproj/project.pbxproj
+# The reviewed mobile/lib/firebase_options.dart contains configuration lookups only.
+
+# Actual data locations, not similarly named application components/pages.
+/backend/uploads/
+/backend/smartgps_uploads/
+/uploads/
+/smartgps_uploads/
+/customer-data/
+/tenant-data/
+/backups/
+/logs/
+*.dump
+*.bak
+*.sqlite
+*.sqlite3
+*.db
+*.log
+# Source SQL migrations are intentionally not ignored.
+
+# Review artifacts must never enter the source import.
+/core-import-review/
+/approved-remediation/
+/readiness-review/
+/scanner-tools/
+/scanner-download/
+/gitleaks-review-*/
+/withheld-source/
+/safe-review-files/
+/syntax-inputs/
+
+# Archives, dependency caches and generated output.
+*.zip
+*.7z
+*.rar
+*.tar
+*.tar.gz
+*.tgz
+*.gz
+node_modules/
+vendor/
+.venv/
+venv/
+__pycache__/
+*.pyc
+.gradle/
+.cxx/
+.dart_tool/
+.pub-cache/
+.pub/
+Pods/
+.symlinks/
+.nuxt/
+.next/
+.output/
+dist/
+build/
+coverage/
+__MACOSX/
+._*
+.DS_Store
+.idea/
+xcuserdata/
+
+# Keep reviewed package manifests, source, localization and lockfiles visible.
+# Do not replace manifest-only staging with force-adding ignored files.

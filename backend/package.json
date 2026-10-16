@@ -1,0 +1,36 @@
+{
+  "name": "cmms-backend",
+  "version": "1.0.0",
+  "description": "",
+  "main": "index.js",
+  "scripts": {
+    "start": "npx directus start",
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "dependencies": {
+    "@directus/errors": "^0.2.0",
+    "axios": "^1.5.0",
+    "directus": "^11.5.1",
+    "docx-preview": "^0.3.7",
+    "firebase-admin": "^13.4.0",
+    "node-cron": "^3.0.3",
+    "pg": "^8.11.3",
+    "sharp": "^0.33.2"
+  },
+  "pnpm": {
+    "ignoredBuiltDependencies": [
+      "@firebase/util",
+      "argon2",
+      "esbuild",
+      "isolated-vm",
+      "oracledb",
+      "protobufjs",
+      "sharp",
+      "sqlite3",
+      "vue-demi"
+    ]
+  }
+}

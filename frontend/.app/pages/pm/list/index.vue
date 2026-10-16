@@ -1,0 +1,85 @@
+<script setup lang="ts">
+import 'v-calendar/dist/style.css'
+import { ref } from 'vue'
+import { useI18n } from 'vue-i18n'
+import '~/assets/css/vcalendar.css'
+import DeletionModalForm from '~/components/form/DeletionModalForm.vue'
+const { t } = useI18n({ useScope: 'global' })
+
+definePageMeta({
+  middleware: ['auth'],
+  title: 'Preventative maintenance',
+  preview: {
+    title: 'Health dashboard',
+    description: 'For health and fitness',
+    categories: ['dashboards'],
+    src: '/img/screens/dashboards-health.png',
+    srcDark: '/img/screens/dashboards-health-dark.png',
+    order: 17,
+  },
+})
+const { getItems } = useDirectusItems()
+const isModalOpen = ref(false)
+const isModalConfirmOpen = ref(false)
+const selectedItem = ref(-1)
+const key = ref(1)
+const status = ref({
+  _neq: 3,
+})
+
+const toaster = useToaster()
+
+const handleModalOpen = () => {
+  selectedItem.value = -1
+  isModalOpen.value = true
+  console.log(isModalOpen.value)
+}
+
+const handleModalClose = () => {
+  isModalOpen.value = false
+  console.log(isModalOpen.value)
+}
+
+const handleModalConfirmClose = () => {
+  isModalConfirmOpen.value = false
+}
+
+const do_edit = (item) => {
+  // Perform your action here
+  selectedItem.value = item.id
+  console.log(selectedItem.value)
+  // isModalOpen.value = true;
+}
+
+const handleChangeKey = () => {
+  key.value = Math.random().toString(36).substring(2) + Date.now().toString(36)
+}
+
+const clearItem = () => {
+  selectedItem.value = -1
+}
+</script>
+
+<template>
+  <div class="relative">
+    <div class="col-span-12">
+      <BaseButton class="left mb-5" to="/pm/new">
+        <Icon name="octicon:tasklist-16" class="-ms-1 h-4 w-4" />
+        <span class="text-[11px]">{{ $t('PM addd') }}</span>
+      </BaseButton>
+    </div>
+    <!-- Grid -->
+    <div class="grid grid-cols-1">
+      <WorkorderPM key="5000" :status="status" :work_order_type="'pm'" />
+      <DeletionModalForm
+        :key="selectedItem"
+        code="Work_request"
+        :open="isModalConfirmOpen"
+        :close="handleModalConfirmClose"
+        :row="selectedItem"
+        :refresh="handleChangeKey"
+        :clear="clearItem"
+      />
+    </div>
+  </div>
+</template>

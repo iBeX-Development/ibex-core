@@ -1,0 +1,13 @@
+{
+	"name": "cmms-cron-job",
+	"version": "1.0.0",
+	"dependencies": {
+	  "node-cron": "^3.0.2"
+	},
+	"directus:extension": {
+	  "type": "hook",
+	  "path": "index.js",
+	  "source": "src/index.js",
+	  "host": "^10.0.0"
+	}
+  }

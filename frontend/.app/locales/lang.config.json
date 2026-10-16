@@ -1,0 +1,49 @@
+{
+  "active": [
+    "en",
+    "mn"
+  ],
+  "languages": [
+    {
+      "code": "en",
+      "label": "English",
+      "flag": "🇺🇸",
+      "icon": "/img/icons/flags/en.svg"
+    },
+    {
+      "code": "mn",
+      "label": "Монгол",
+      "flag": "🇲🇳",
+      "icon": "/img/icons/flags/mn.svg"
+    },
+    {
+      "code": "zh",
+      "label": "中文",
+      "flag": "🇨🇳",
+      "icon": "/img/icons/flags/china.svg"
+    },
+    {
+      "code": "ko",
+      "label": "한국어",
+      "flag": "🇰🇷",
+      "icon": "/img/icons/flags/ko.svg"
+    },
+    {
+      "code": "kz",
+      "label": "Қазақша",
+      "flag": "🇰🇿",
+      "icon": "/img/icons/flags/kz.svg"
+    },
+    {
+      "code": "jp",
+      "label": "Japan",
+      "flag": "🇯🇵",
+      "icon": "/img/icons/flags/jp.svg"
+    },
+    {
+      "code": "de",
+      "label": "Germany",
+      "flag": "🇩🇪"
+    }
+  ]
+}

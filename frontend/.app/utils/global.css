@@ -1,0 +1,185 @@
+.GridBody {
+  margin-top: 64px;
+}
+
+/* v-select clear button size */
+.vs__clear {
+  transform: scale(0.7);
+  transform-origin: center;
+  opacity: 0.6;
+}
+.vs__clear:hover {
+  opacity: 1;
+}
+.ag-theme-quartz .ag-icon.ag-icon-tree-closed {
+  height: 32px;
+}
+.relativeBody {
+  margin-top: 64px;
+}
+.tabGridBody {
+  margin-top: -60px;
+}
+.tabs .nui-tabs-inner {
+  z-index: 100;
+  position: relative;
+}
+
+/* darkmode */
+.dark .dark\:border-muted-700:is(.dark *),
+.dark .v-select.dark,
+.dark .v-select.dark .vs__dropdown-toggle {
+  border-color: #334155 !important;
+  color: #f1f5f9 !important;
+}
+.dark .v-select.dark .vs__dropdown-toggle .vs__selected {
+  color: #f1f5f9 !important;
+}
+
+.dark textarea,
+.dark input,
+.dark select,
+.dark .nui-input,
+.dark .nui-textarea,
+.dark .nui-select {
+  background-color: #0f172a !important;
+  color: white !important;
+}
+.dark\:bg-muted-800:is(.dark *),
+.dark\:bg-muted-600:is(.dark *) {
+  background-color: #1e293b !important;
+  color: white !important;
+}
+
+/* AG Grid */
+.grid_ag_list .ag-center-cols-container {
+  overflow: visible !important;
+  display: flex !important;
+  flex-direction: column !important;
+}
+.grid_ag_list .ag-row {
+  overflow: visible !important;
+  position: relative !important;
+  transform: none !important;
+  /* width: inherit; */
+}
+.grid_ag_list .ag-row .status-cell {
+  border: none !important;
+}
+.grid_ag_list .ag-row .actions-cell {
+  overflow: visible !important;
+}
+/* .ag-unselectable {
+  -moz-user-select:auto !important;
+  -webkit-user-select: auto !important;
+  user-select: auto !important;
+} */
+
+/* TairoModal */
+.TairoModal .v-data-table-footer {
+  margin-top: 20px;
+}
+
+.TairoModal .TairoModalBody {
+  padding: 15px;
+}
+
+.TairoModal .TairoModalBody .Search,
+.rowsContainer .nui-textarea-outer {
+  margin-bottom: 10px;
+  /* border: 1px solid #d9d9d9; */
+  border-radius: 6px;
+}
+.Searching {
+  border: 1px solid #d9d9d9;
+  border-radius: 6px;
+  overflow: hidden;
+}
+
+.TairoModal .TairoModalBody .Choose {
+  padding: 15px;
+  height: 20px;
+}
+
+.TairoModal .v-data-table__thead {
+  color: gray;
+}
+
+.nui-textarea-outer .write_comments {
+  border: 1px solid #d1d5db !important;
+  border-radius: 7px !important;
+}
+
+.nui-listbox .nui-listbox-outer {
+  border: 1px solid #dfdfdfbd !important;
+  border-radius: 6px !important;
+}
+.nui-textarea.nui-textarea-focus {
+  border-radius: 6px !important;
+}
+.nui-listbox-button {
+  border-radius: 6px !important;
+}
+.TairoModal .vs__no-options,
+.TairoModal .vs__dropdown-option--disabled,
+.PopupContainer .vs__no-options,
+.PopupContainer .vs__dropdown-option--disabled,
+.rowsContainer .vs__no-options,
+.rowsContainer .vs__dropdown-option--disabled,
+.rows-container .vs__no-options,
+.rows-container .vs__dropdown-option--disabled {
+  font-size: 11px !important;
+  line-height: 1.25;
+  padding: 8px 10px;
+}
+
+.ag-menu {
+  z-index: 100 !important;
+}
+.ag-panel.ag-default-panel.ag-dialog.ag-popup-child {
+  z-index: 100 !important;
+}
+
+.nui-dropdown-item  .nui-item-content {
+  white-space: pre-line;
+}
+
+.two-column-form {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  grid-column-gap: 20px; /* Adjust as needed */
+}
+.three-column-form {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  grid-column-gap: 20px; /* Adjust as needed */
+}
+.four-column-form {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  grid-column-gap: 20px; /* Adjust as needed */
+}
+
+.v-overlay {
+  z-index: 10001 !important;
+}
+/* Custom CSS for vue-select AC*/
+/* .vs__search,
+.vs__search:focus,
+.light.style-chooser .vs__searchable::placeholder,
+.light.style-chooser .vs__search::placeholder,
+.light.style-chooser .vs__search,
+.light.style-chooser .vs__dropdown-toggle,
+.light.style-chooser .vs__dropdown-menu {
+  background: #dfe5fb;
+  border: none;
+} */
+.light.style-chooser .vs__searchable::placeholder,
+.light.style-chooser .vs__search::placeholder {
+  color: #e1e0e0 !important;
+  opacity: 1;
+  font-size: 12px;
+}
+.vs__dropdown-menu {
+  z-index: 9999 !important;
+}

@@ -1,0 +1,274 @@
+<script setup lang="ts">
+definePageMeta({
+  title: 'Inspections',
+  preview: {
+    title: 'Inspections',
+    description: 'For list views and collections',
+    categories: ['layouts', 'lists'],
+    src: '/img/screens/layouts-table-list-1.png',
+    srcDark: '/img/screens/layouts-table-list-1-dark.png',
+    order: 44,
+  },
+})
+
+const route = useRoute()
+const router = useRouter()
+const page = computed(() => parseInt((route.query.page as string) ?? '1'))
+
+const filter = ref('')
+const data = ref(null)
+const perPage = ref(10)
+
+watch([filter, perPage], () => {
+  router.push({
+    query: {
+      page: undefined,
+    },
+  })
+})
+
+const query = computed(() => {
+  return {
+    filter: filter.value,
+    perPage: perPage.value,
+    page: page.value,
+  }
+})
+
+const selected = ref<number[]>([])
+import { getDemoData } from './inspecs'
+
+const isAllVisibleSelected = computed(() => {
+  // console.log('data_hello ->', data.value)
+  // console.log('ata.value?.length ->', data.value?.length)
+  return selected.value.length === data.value?.length
+})
+
+function toggleAllVisibleSelection() {
+  if (isAllVisibleSelected.value) {
+    selected.value = []
+  } else {
+    selected.value = data.value?.map((item) => item.id) ?? []
+  }
+}
+
+onMounted(async () => {
+  data.value = await getDemoData()
+})
+</script>
+
+<template>
+  <div class="col-span-12">
+    <BaseButton>
+      <Icon name="mynaui:plus" class="-ms-1 h-4 w-4" />
+      <span class="text-[11px]">{{ $t('Add') }}</span>
+    </BaseButton>
+  </div>
+  <div class="relative relativeBody">
+    <TairoContentWrapper>
+      <TairoContentWrapper>
+        <template #left>
+          <BaseInput
+            icon="lucide:search"
+            placeholder="Filter"
+            :classes="{
+              wrapper: 'w-[340px]',
+            }"
+          />
+        </template>
+      </TairoContentWrapper>
+      <div>
+        <div v-if="data?.length === 0">
+          <BasePlaceholderPage
+            title="No matching results"
+            subtitle="Looks like we couldn't find any matching results for your search terms. Try other search terms."
+          >
+            <template #image>
+              <img
+                class="block dark:hidden"
+                src="/img/illustrations/placeholders/flat/placeholder-search-4.svg"
+                alt="Placeholder image"
+              />
+              <img
+                class="hidden dark:block"
+                src="/img/illustrations/placeholders/flat/placeholder-search-4-dark.svg"
+                alt="Placeholder image"
+              />
+            </template>
+          </BasePlaceholderPage>
+        </div>
+        <div v-else class="mt-[-10px]">
+          <div class="w-full">
+            <TairoTable rounded="sm" :scrollable="false">
+              <template #header>
+                <TairoTableHeading uppercase spaced class="p-4">
+                  <div class="flex items-center">
+                    <BaseCheckbox
+                      :model-value="isAllVisibleSelected"
+                      :indeterminate="
+                        selected.length > 0 && !isAllVisibleSelected
+                      "
+                      name="table-1-main"
+                      rounded="sm"
+                      color="primary"
+                      @click="toggleAllVisibleSelection"
+                    />
+                  </div>
+                </TairoTableHeading>
+                <TairoTableHeading uppercase spaced>
+                  Collaborator
+                </TairoTableHeading>
+                <TairoTableHeading uppercase spaced>
+                  Location
+                </TairoTableHeading>
+                <TairoTableHeading uppercase spaced> Status </TairoTableHeading>
+                <TairoTableHeading uppercase spaced>
+                  Completed
+                </TairoTableHeading>
+                <TairoTableHeading uppercase spaced class="text-end">
+                  Action
+                </TairoTableHeading>
+              </template>
+
+              <TairoTableRow v-if="selected.length > 0" :hoverable="false">
+                <TairoTableCell
+                  colspan="6"
+                  class="bg-success-100 text-success-700 dark:bg-success-700 dark:text-success-100 p-4"
+                >
+                  You have selected {{ selected.length }} items of the total
+                  {{ data?.total }} items.
+                  <a
+                    href="#"
+                    class="outline-none hover:underline focus:underline"
+                    >Click here to everything</a
+                  >
+                </TairoTableCell>
+              </TairoTableRow>
+
+              <TairoTableRow v-for="item in data" :key="item.id">
+                <TairoTableCell spaced>
+                  <div class="flex items-center">
+                    <BaseCheckbox
+                      v-model="selected"
+                      :value="item.id"
+                      :name="`item-checkbox-${item.id}`"
+                      rounded="sm"
+                      color="primary"
+                    />
+                  </div>
+                </TairoTableCell>
+                <TairoTableCell spaced>
+                  <div class="flex items-center">
+                    <BaseAvatar
+                      :src="item.picture"
+                      :text="item.initials"
+                      :class="getRandomColor()"
+                    />
+                    <div class="ms-3 leading-none">
+                      <h4 class="font-sans text-sm font-medium">
+                        {{ item.username }}
+                      </h4>
+                      <p class="text-muted-400 font-sans text-xs">
+                        {{ item.position }}
+                      </p>
+                    </div>
+                  </div>
+                </TairoTableCell>
+                <TairoTableCell light spaced>
+                  {{ item.location }}
+                </TairoTableCell>
+                <TairoTableCell spaced class="capitalize">
+                  <BaseTag
+                    v-if="item.status === 'available'"
+                    color="success"
+                    variant="pastel"
+                    rounded="full"
+                    size="sm"
+                    class="font-medium"
+                  >
+                    {{ item.status }}
+                  </BaseTag>
+                  <BaseTag
+                    v-else-if="item.status === 'new'"
+                    color="info"
+                    variant="pastel"
+                    rounded="full"
+                    size="sm"
+                    class="font-medium"
+                  >
+                    {{ item.status }}
+                  </BaseTag>
+                  <BaseTag
+                    v-else-if="item.status === 'busy'"
+                    color="warning"
+                    variant="pastel"
+                    rounded="full"
+                    size="sm"
+                    class="font-medium"
+                  >
+                    {{ item.status }}
+                  </BaseTag>
+                  <BaseTag
+                    v-else-if="item.status === 'offline'"
+                    color="muted"
+                    variant="pastel"
+                    rounded="full"
+                    size="sm"
+                    class="font-medium"
+                  >
+                    {{ item.status }}
+                  </BaseTag>
+                </TairoTableCell>
+                <TairoTableCell spaced>
+                  <div class="flex items-center">
+                    <div class="relative">
+                      <BaseProgressCircle
+                        :value="item.completed"
+                        :thickness="1"
+                        :size="50"
+                        class="text-success-500"
+                      />
+                      <span
+                        class="absolute start-1/2 top-1/2 z-10 ms-0.5 -translate-x-1/2 -translate-y-1/2 font-sans text-[0.65rem] font-semibold rtl:me-0.5 rtl:ms-0 rtl:translate-x-1/2"
+                      >
+                        {{ item.completed }}%
+                      </span>
+                    </div>
+                    <span class="text-muted-400 font-sans text-xs">
+                      Tasks completed
+                    </span>
+                  </div>
+                </TairoTableCell>
+                <TairoTableCell spaced>
+                  <div class="flex justify-end">
+                    <BaseDropdown
+                      variant="context"
+                      label="Dropdown"
+                      placement="bottom-end"
+                      rounded="md"
+                    >
+                      <BaseDropdownItem
+                        to="#"
+                        title="User"
+                        text="View details"
+                        rounded="md"
+                      />
+                    </BaseDropdown>
+                  </div>
+                </TairoTableCell>
+              </TairoTableRow>
+            </TairoTable>
+          </div>
+          <div class="mt-6">
+            <BasePagination
+              :total-items="data?.total ?? 0"
+              :item-per-page="perPage"
+              :current-page="page"
+              rounded="lg"
+            />
+          </div>
+        </div>
+      </div>
+    </TairoContentWrapper>
+  </div>
+</template>
